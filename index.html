@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素表第三版 - 國中理化神助手</title>
+    <style>
+        :root {
+            --primary-dark: #2c3e50;
+            --accent-orange: #f39c12;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --info-blue: #3498db;
+            --bg-light: #f5f6fa;
+        }
+
+        body {
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-light);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .top-bar {
+            background: var(--primary-dark);
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .main-container {
+            display: flex;
+            gap: 25px;
+            padding: 25px;
+            max-width: 1400px;
+            width: 98%;
+        }
+
+        /* 左側：遊戲操作區 */
+        .game-panel {
+            flex: 2;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+        }
+
+        /* 右側：學習資訊區 */
+        .study-panel {
+            flex: 1.2;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            border-right: 10px solid var(--accent-orange);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            min-height: 650px;
+        }
+
+        #periodic-table {
+            display: grid;
+            grid-template-columns: repeat(18, 1fr);
+            gap: 6px;
+            margin-top: 30px;
+        }
+
+        .element-node {
+            aspect-ratio: 1/1.2;
+            background: #fdfdfd;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .element-node:hover {
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 10;
+            border-color: var(--info-blue);
+        }
+
+        .element-node .num { font-size: 0.65rem; color: #7f8c8d; }
+        .element-node .sym { font-weight: 800; font-size: 1.2rem; color: #2d3436; }
+
+        .empty-slot { visibility: hidden; }
+
+        /* 資訊卡細節 */
+        .info-header { border-bottom: 3px solid var(--bg-light); margin-bottom: 20px; padding-bottom: 10px; }
+        .data-row { display: flex; justify-content: space-between; margin: 12px 0; font-size: 1.1rem; }
+        .weight-tag { background: #ffeaa7; color: #d35400; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        
+        .calc-card {
+            background: #f0f7ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 5px solid var(--info-blue);
+        }
+        .math-text { font-family: 'Consolas', monospace; color: #2980b9; font-weight: bold; font-size: 1.1rem; display: block; margin-top: 5px; }
+        
+        #target-display { font-size: 3.5rem; color: var(--accent-orange); text-shadow: 2px 2px 4px rgba(0,0,0,0.05); }
+        .correct-anim { background-color: var(--success-green) !important; color: white !important; }
+        .wrong-anim { background-color: var(--error-red) !important; color: white !important; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <h1 style="margin:0;">🧪 元素週期表挑戰：第三版 (理化高手篇)</h1>
+</div>
+
+<div class="main-container">
+    <div class="game-panel">
+        <div style="text-align: center;">
+            <p style="font-size: 1.2rem; color: #636e72; margin-bottom: 0;">請在表中找出元素：</p>
+            <h2 id="target-display">載入中...</h2>
+            <div style="background: #dfe6e9; display: inline-block; padding: 5px 20px; border-radius: 20px; font-weight: bold;">
+                目前的積分：<span id="score-val" style="color:var(--success-green);">0</span>
+            </div>
+        </div>
+        <div id="periodic-table"></div>
+    </div>
+
+    <div class="study-panel" id="side-panel">
+        <div class="info-header">
+            <h2 style="margin:0; color:var(--primary-dark);">📖 元素學習卡</h2>
+        </div>
+        <div id="info-placeholder">
+            <p style="color: #b2bec3; font-size: 1.1rem; line-height: 1.6;">
+                答對正確元素後，這裡會解鎖：<br>
+                ✅ 原子量快查<br>
+                ✅ 國中必考化學式<br>
+                ✅ 分子量詳細計算過程
+            </p>
+        </div>
+        <div id="info-content" style="display:none;">
+            </div>
+    </div>
+</div>
+
+<script>
+    const chemData = [
+        { n: 1, s: "H", name: "氫", w: 1, r: 1, c: 1, formulas: [{n:"H₂O (水)", m:"1×2 + 16 = 18"}, {n:"H₂O₂ (雙氧水)", m:"1×2 + 16×2 = 34"}], hint: "常溫下密度最小的氣體，具助燃性產物是水。" },
+        { n: 6, s: "C", name: "碳", w: 12, r: 2, c: 14, formulas: [{n:"CO₂ (二氧化碳)", m:"12 + 16×2 = 44"}, {n:"CaCO₃ (碳酸鈣)", m:"40 + 12 + 16×3 = 100"}], hint: "石墨可導電；碳酸鈣是蛋殼、大理石的主要成分。" },
+        { n: 7, s: "N", name: "氮", w: 14, r: 2, c: 15, formulas: [{n:"NH₃ (氨)", m:"14 + 1×3 = 17"}], hint: "空氣中含量最多。液氮可用於液凍治療。" },
+        { n: 8, s: "O", name: "氧", w: 16, r: 2, c: 16, formulas: [{n:"O₂ (氧氣)", m:"16×2 = 32"}, {n:"O₃ (臭氧)", m:"16×3 = 48"}], hint: "助燃性氣體，生物呼吸必需。" },
+        { n: 11, s: "Na", name: "鈉", w: 23, r: 3, c: 1, formulas: [{n:"NaOH (氫氧化鈉)", m:"23 + 16 + 1 = 40"}, {n:"NaHCO₃ (小蘇打)", m:"23 + 1 + 12 + 16×3 = 84"}], hint: "強鹼。小蘇打加熱會產生二氧化碳，可用於滅火或烘焙。" },
+        { n: 12, s: "Mg", name: "鎂", w: 24, r: 3, c: 2, formulas: [{n:"MgO (氧化鎂)", m:"24 + 16 = 40"}], hint: "燃燒產生強烈白光，可用於照明彈。" },
+        { n: 13, s: "Al", name: "鋁", w: 27, r: 3, c: 13, formulas: [{n:"Al₂O₃ (氧化鋁)", m:"27×2 + 16×3 = 102"}], hint: "地殼中含量最多的金屬。抗腐蝕性強。" },
+        { n: 16, s: "S", name: "硫", w: 32, r: 3, c: 16, formulas: [{n:"SO₂ (二氧化硫)", m:"32 + 16×2 = 64"}, {n:"H₂SO₄ (硫酸)", m:"1×2 + 32 + 16×4 = 98"}], hint: "俗稱硫磺。燃燒產物二氧化硫是酸雨的主要來源。" },
+        { n: 17, s: "Cl", name: "氯", w: 35.5, r: 3, c: 17, formulas: [{n:"NaCl (食鹽)", m:"23 + 35.5 = 58.5"}, {n:"HCl (鹽酸)", m:"1 + 35.5 = 36.5"}], hint: "黃綠色氣體，常用於自來水消毒。" },
+        { n: 20, s: "Ca", name: "鈣", w: 40, r: 4, c: 2, formulas: [{n:"CaO (生石灰)", m:"40 + 16 = 56"}, {n:"Ca(OH)₂ (熟石灰)", m:"40 + (16+1)×2 = 74"}], hint: "骨骼主要成分。石灰水遇二氧化碳變混濁。" },
+        { n: 26, s: "Fe", name: "鐵", w: 56, r: 4, c: 8, formulas: [{n:"Fe₂O₃ (三氧化二鐵)", m:"56×2 + 16×3 = 160"}], hint: "工業之母。高爐煉鐵中使用一氧化碳作為還原劑。" },
+        { n: 29, s: "Cu", name: "銅", w: 63.5, r: 4, c: 11, formulas: [{n:"CuSO₄ (硫酸銅)", m:"63.5 + 32 + 16×4 = 159.5"}], hint: "導電性優。無水硫酸銅為白色，遇水變藍色。" }
+    ];
+
+    let current = null;
+    let score = 0;
+
+    function buildTable() {
+        const table = document.getElementById('periodic-table');
+        for (let r = 1; r <= 7; r++) {
+            for (let c = 1; c <= 18; c++) {
+                const data = chemData.find(e => e.r === r && e.c === c);
+                const cell = document.createElement('div');
+                if (data) {
+                    cell.className = 'element-node';
+                    cell.innerHTML = `<span class="num">${data.n}</span><span class="sym">${data.s}</span>`;
+                    cell.onclick = () => handleInput(data, cell);
+                } else {
+                    cell.className = 'empty-slot';
+                }
+                table.appendChild(cell);
+            }
+        }
+        pickNext();
+    }
+
+    function pickNext() {
+        current = chemData[Math.floor(Math.random() * chemData.length)];
+        document.getElementById('target-display').innerText = current.name;
+    }
+
+    function handleInput(clicked, el) {
+        if (clicked.s === current.s) {
+            score += 10;
+            document.getElementById('score-val').innerText = score;
+            el.classList.add('correct-anim');
+            showInfo(clicked);
+            setTimeout(() => { el.classList.remove('correct-anim'); pickNext(); }, 800);
+        } else {
+            el.classList.add('wrong-anim');
+            setTimeout(() => el.classList.remove('wrong-anim'), 300);
+        }
+    }
+
+    function showInfo(data) {
+        document.getElementById('info-placeholder').style.display = 'none';
+        const content = document.getElementById('info-content');
+        content.style.display = 'block';
+        
+        let formulasHtml = data.formulas.map(f => `
+            <div class="calc-card">
+                <span style="color:var(--primary-dark); font-weight:bold;">${f.n}</span>
+                <span class="math-text">${f.m}</span>
+            </div>
+        `).join('');
+
+        content.innerHTML = `
+            <div class="data-row"><span>元素名稱：</span><strong>${data.name} (${data.s})</strong></div>
+            <div class="data-row"><span>原子序：</span><strong>${data.n}</strong></div>
+            <div class="data-row"><span>原子量：</span><span class="weight-tag">${data.w}</span></div>
+            
+            <div style="background:#fff9eb; padding:15px; border-radius:8px; margin:20px 0; border:1px solid #ffeaa7;">
+                <strong style="color:#d35400;">💡 必考知識：</strong><br>
+                <span style="font-size:0.95rem; color:#555;">${data.hint}</span>
+            </div>
+
+            <h4 style="margin-bottom:5px; color:var(--info-blue);">🧮 分子量計算過程：</h4>
+            ${formulasHtml}
+        `;
+    }
+
+    buildTable();
+</script>
+</body>
+</html>
